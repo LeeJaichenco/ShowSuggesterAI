@@ -9,7 +9,6 @@ import pandas as pd
 import openai
 import os
 import pickle
-import math
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -97,7 +96,6 @@ def get_embeddings_dict_from_pickle(pickle_path='tv_show_embeddings.pkl'):
             embeddings_dict = pickle.load(file)
             return embeddings_dict
     else:
-        # Return an empty dictionary if the file does not exist
         return {}
 
 
@@ -127,10 +125,7 @@ def recommend_shows(input_shows, embeddings_dict, average_vector):
 
     for show, vector in embeddings_dict.items():
         if show not in input_shows:
-            # logging.info(average_vector[:5])
-            # logging.info(vector[:5])
             similarity = calculate_cosine_similarity(vector, average_vector)
-            # logging.info(similarity)
             similarity_scores[show] = similarity
 
     # Sort shows based on similarity scores

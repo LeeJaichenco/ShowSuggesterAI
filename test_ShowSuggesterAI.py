@@ -2,6 +2,7 @@ import logging
 import ShowSuggesterAI as SSA
 import pytest
 import math
+import os
 
 
 @pytest.fixture
@@ -72,3 +73,13 @@ def test_recommend_shows_excludes_input(example_shows, recommended_shows):
     recommended_show_names = [show[0] for show in recommended_shows]  # Assuming recommended_shows returns a list of tuples or list of names
     assert all(show not in example_shows for show in recommended_show_names)
 
+
+def test_dall_e_generate_image_returns_valid_path():
+    # Assuming the function requires a prompt and optionally a filename
+    prompt = "Test prompt for DALL-E"
+    filename = "test_image.png"
+
+    image_path = SSA.dall_e_generate_image(prompt, image_name=filename)
+
+    # Check if the return value is a valid file path
+    assert image_path.endswith(filename)
