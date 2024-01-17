@@ -100,17 +100,11 @@ def get_embeddings_dict_from_pickle(pickle_path='tv_show_embeddings.pkl'):
 
 
 def calculate_average_vector(list_of_vectors):
-    # Initialize a list with zeros of the same length as the first vector
-    average_vector = [0] * len(list_of_vectors[0])
+    # Convert list of vectors to a DataFrame
+    df = pd.DataFrame(list_of_vectors)
 
-    # Sum up all vectors
-    for vector in list_of_vectors:
-        for i, value in enumerate(vector):
-            average_vector[i] += value
-
-    # Divide by the number of vectors to get the average
-    num_vectors = len(list_of_vectors)
-    average_vector = [x / num_vectors for x in average_vector]
+    # Calculate the mean of each column
+    average_vector = df.mean(axis=0).tolist()
 
     return average_vector
 
