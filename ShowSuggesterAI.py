@@ -18,11 +18,8 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Function to read TV show titles from a CSV file
 def read_tv_shows_from_csv(csv_path='imdb_tvshows.csv'):
-    tv_shows = []
-    with open(csv_path, mode='r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            tv_shows.append(row['Title'].strip())
+    df = pd.read_csv(csv_path)
+    tv_shows = df['Title'].str.strip().tolist()
     return tv_shows
 
 
@@ -207,8 +204,8 @@ def generate_tv_show_description(prompt):
 
 
 def generate_tv_show_image(prompt, show_name):
-    # Generate image using DALL-E API (assuming a function for this exists)
-    image_path = dall_e_generate_image(prompt, show_name)  # This function should call DALL-E API and save the image, returning the path
+    # Generate image using DALL-E API
+    image_path = dall_e_generate_image(prompt, show_name)
     return image_path
 
 
