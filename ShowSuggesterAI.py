@@ -4,14 +4,13 @@ from PIL import Image
 from io import BytesIO
 import requests
 from fuzzywuzzy import process
-import csv
 import pandas as pd
 import openai
 import os
 import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - Line: %(lineno)d  - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - Line: %(lineno)d  - %(levelname)s - %(message)s')
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
@@ -44,6 +43,7 @@ def check_shows(user_shows, valid_shows):
     return corrected_shows
 
 
+# Function to get the final user shows
 def run_show_suggestion(csv_path):
     valid_shows = read_tv_shows_from_csv(csv_path)
     while True:
@@ -85,6 +85,7 @@ def process_csv_to_dict(csv_path='imdb_tvshows.csv', pickle_path='tv_show_embedd
     return tv_show_embeddings
 
 
+# Function to get the embeddings from the pickle file
 def get_embeddings_dict_from_pickle(pickle_path='tv_show_embeddings.pkl'):
     # Check if the pickle file exists
     if os.path.exists(pickle_path):
@@ -97,12 +98,9 @@ def get_embeddings_dict_from_pickle(pickle_path='tv_show_embeddings.pkl'):
 
 
 def calculate_average_vector(list_of_vectors):
-    # Convert list of vectors to a DataFrame
     df = pd.DataFrame(list_of_vectors)
-
     # Calculate the mean of each column
     average_vector = df.mean(axis=0).tolist()
-
     return average_vector
 
 
@@ -118,21 +116,20 @@ def recommend_shows(input_shows, embeddings_dict, average_vector):
         if show not in input_shows:
             similarity = calculate_cosine_similarity(vector, average_vector)
             similarity_scores[show] = similarity
-
-    # Sort shows based on similarity scores
+    # Sort the shows by similarity from high to low
     sorted_shows = sorted(similarity_scores.items(), key=lambda x: x[1], reverse=True)
+    top_shows_with_percentage = get_top_shows_with_percentage(sorted_shows)
 
-    # Calculate old_min and old_max
+    return top_shows_with_percentage
+
+
+def get_top_shows_with_percentage(sorted_shows):
     old_min = min(sorted_shows, key=lambda x: x[1])[1]
     old_max = max(sorted_shows, key=lambda x: x[1])[1]
-
-    # Select the top 5 shows
     top_shows = sorted_shows[:5]
-
     # Rescale similarity scores to percentage
     top_shows_with_percentage = [(show, rescale_similarity(score, old_min, old_max, 0, 100)) for show, score in
                                  top_shows]
-
     return top_shows_with_percentage
 
 
@@ -140,6 +137,7 @@ def rescale_similarity(similarity, old_min, old_max, new_min, new_max):
     return ((similarity - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
 
 
+# Function that returns the recommendations as a string
 def format_recommendations(recommended_shows):
     if not recommended_shows:
         return "No recommendations available."
@@ -151,52 +149,22 @@ def format_recommendations(recommended_shows):
     return recommendation_str
 
 
-def run_tv_show_recommender_system():
-    # Path to CSV and pickle file
-    csv_path = 'imdb_tvshows.csv'
-    pickle_path = 'tv_show_embeddings.pkl'
-
-    # Load embeddings dictionary from pickle
-    embeddings_dict = get_embeddings_dict_from_pickle(pickle_path)
-
-    # Ensure embeddings_dict is not empty
-    if not embeddings_dict:
-        embeddings_dict = process_csv_to_dict(csv_path, pickle_path)
-
-    # After the user confirms the shows, we need to generate recommendations
-    user_shows = run_show_suggestion(csv_path)
-
-    # Generate embeddings for user's shows
-    user_show_embeddings = [embeddings_dict[show] for show in user_shows if show in embeddings_dict]
-
-    # Calculate the average vector
-    average_vector = calculate_average_vector(user_show_embeddings)
-
-    # Generate and display recommendations
-    recommended_shows = recommend_shows(user_shows, embeddings_dict, average_vector)
-    formatted_recommendations = format_recommendations(recommended_shows)
-    print(formatted_recommendations)
-
-    made_up_shows(recommended_shows, user_shows)
-
-
+# Function to generate and display invented shows and ads
 def made_up_shows(recommended_shows, user_shows):
     description_prompt = f"Create a TV show description based on the shows below, in your answer provide the structure: show name- description "
     image_prompt = "Create an image ad for this show:."
+
     user_shows_description = generate_tv_show_description(description_prompt + str(user_shows))
-    recommended_shows_description = generate_tv_show_description(
-        description_prompt + (', '.join([show for (show, _) in recommended_shows])))
-    input_show_image_path = dall_e_generate_image(image_prompt + user_shows_description,
-                                                  image_name="input_show_image.png")
-    recommended_show_image_path = dall_e_generate_image(image_prompt + recommended_shows_description,
-                                                        image_name="recommended_show_image.png")
+    recommended_shows_description = generate_tv_show_description(description_prompt + (', '.join([show for (show, _) in recommended_shows])))
+
     print("I have also created just for you two shows which I think you would love. \n"
           "Show #1 is based on the fact that you loved the input shows that you"
           f" gave me, {user_shows_description}. \n\n"
           f"Show #2 is based on the shows that I recommended for you, {recommended_shows_description}. "
           "Here are also the 2 tv show ads. Hope you like them!")
-    display_image(input_show_image_path)
-    display_image(recommended_show_image_path)
+
+    generate_tv_show_image(image_prompt + user_shows_description, "input_show.png")
+    generate_tv_show_image(image_prompt + recommended_shows_description, "recommended_show.png")
 
 
 def generate_tv_show_description(prompt):
@@ -215,14 +183,13 @@ def generate_tv_show_description(prompt):
     return generated_text.strip()
 
 
+# Generate and display image using DALL-E API
 def generate_tv_show_image(prompt, show_name):
-    # Generate image using DALL-E API
     image_path = dall_e_generate_image(prompt, show_name)
-    return image_path
+    display_image(image_path)
 
 
 def display_image(image_path):
-    # Opens the image using the default image viewer
     if os.name == 'posix':  # for Linux, Mac, etc.
         subprocess.run(['open', image_path])
     elif os.name == 'nt':  # for Windows
@@ -243,22 +210,36 @@ def dall_e_generate_image(prompt, output_dir='generated_images', image_name=None
     response = openai.Image.create(
         model="dall-e-3",
         prompt=prompt,
-        n=1,  # Generate one image
-        size="1024x1024",  # Image size
+        n=1,
+        size="1024x1024",
         api_key=os.getenv('OPENAI_API_KEY')
     )
 
-    # Assuming the response contains a direct link to the image
     image_url = response['data'][0]['url']
-
-    # Download the image
+    # Download and save the image
     response = requests.get(image_url)
     image = Image.open(BytesIO(response.content))
-
-    # Save the image
     image.save(output_path)
 
     return output_path
+
+
+def run_tv_show_recommender_system():
+    csv_path = 'imdb_tvshows.csv'
+    pickle_path = 'tv_show_embeddings.pkl'
+    embeddings_dict = process_csv_to_dict(csv_path, pickle_path)
+    # Get users confirmed shows
+    user_shows = run_show_suggestion(csv_path)
+    # Generate embeddings for user's shows
+    user_show_embeddings = [embeddings_dict[show] for show in user_shows if show in embeddings_dict]
+    # Calculate the average vector of all the users shows
+    average_vector = calculate_average_vector(user_show_embeddings)
+    # Generate and display recommendations
+    recommended_shows = recommend_shows(user_shows, embeddings_dict, average_vector)
+    formatted_recommendations = format_recommendations(recommended_shows)
+    print(formatted_recommendations)
+    # Generate and display invented shows and ads
+    made_up_shows(recommended_shows, user_shows)
 
 
 if __name__ == "__main__":

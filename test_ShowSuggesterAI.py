@@ -15,9 +15,8 @@ def example_shows():
 
 @pytest.fixture
 def average_vector(example_shows):
-    embeddings_dict = ssa.process_csv_to_dict("imdb_tvshows.csv")  # Get embeddings dictionary
-    show_vectors = [embeddings_dict[show] for show in example_shows if
-                    show in embeddings_dict]  # Get vectors for example shows
+    embeddings_dict = ssa.process_csv_to_dict("imdb_tvshows.csv")
+    show_vectors = [embeddings_dict[show] for show in example_shows if show in embeddings_dict]
     return ssa.calculate_average_vector(show_vectors)
 
 
@@ -32,14 +31,12 @@ def test_read_tv_shows_from_csv(example_shows, all_shows):
     assert all_shows[:2] == example_shows
 
 
-def test_check_shows_corrects_input(example_shows):
+def test_check_shows_corrects_input(example_shows, all_shows):
     user_shows = ["Game of Thre", "Brking Bed"]
-    valid_shows = ["Game of Thrones", "Breaking Bad", "The Witcher"]
-    assert ssa.check_shows(user_shows, valid_shows) == example_shows
+    assert ssa.check_shows(user_shows, all_shows) == example_shows
 
 
 def test_process_csv_to_dict_contains_all_shows(all_shows):
-    # Process the CSV to get the embeddings dictionary
     embeddings_dict = ssa.process_csv_to_dict("imdb_tvshows.csv")
 
     # Check that every show name is a key in the embeddings dictionary
@@ -48,8 +45,8 @@ def test_process_csv_to_dict_contains_all_shows(all_shows):
 
 
 def test_calculate_average_vector():
-    vectors = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]  # Example embedding vectors
-    expected_average = [4, 5, 6]  # Expected average vector
+    vectors = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+    expected_average = [4, 5, 6]
     assert ssa.calculate_average_vector(vectors) == expected_average
 
 
@@ -68,15 +65,14 @@ def test_recommend_shows_length(recommended_shows):
 
 # Test that recommended shows do not include input shows
 def test_recommend_shows_excludes_input(example_shows, recommended_shows):
-    recommended_show_names = [show[0] for show in recommended_shows]  # Assuming recommended_shows returns a list of tuples or list of names
+    recommended_show_names = [show[0] for show in recommended_shows]
     assert all(show not in example_shows for show in recommended_show_names)
 
 
+# Check if the return value is a valid image path
 def test_dall_e_generate_image_returns_valid_path():
     prompt = "Test prompt for DALL-E"
     filename = "test_image.png"
 
     image_path = ssa.dall_e_generate_image(prompt, image_name=filename)
-
-    # Check if the return value is a valid image path
     assert image_path.endswith(filename)
